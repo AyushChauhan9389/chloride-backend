@@ -2,10 +2,13 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { db } from '../db';
-import { users } from '../db/schema';
-import { generateToken } from '../services/auth.service';
+import { users, plans, roles } from '../db/schema';
+import { generateUserToken } from '../services/auth.service';
 import { NewUser } from '../types/user.types';
 import { eq } from 'drizzle-orm';
+import { getPlanById } from '../services/plan.service';
+import { getRoleByName, initializeDefaultRoles } from '../services/role.service';
+import { ROLE_NAMES } from '../types/user.types';
 
 export const signup = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -25,16 +28,57 @@ export const signup = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Initialize default roles if they don't exist
+    await initializeDefaultRoles();
+
+    // Get or create default plan
+    let defaultPlan = await db.query.plans.findFirst({
+      where: eq(plans.name, 'Free'),
+    });
+
+    if (!defaultPlan) {
+      // Create default plan if it doesn't exist
+      const createdPlan = await db.insert(plans).values({
+        name: 'Free',
+        fileLimit: 10,
+        storageLimit: 100 * 1024 * 1024, // 100MB in bytes
+      }).returning();
+
+      defaultPlan = createdPlan[0];
+    }
+
+    // Get default user role
+    const defaultRole = await db.query.roles.findFirst({
+      where: eq(roles.name, ROLE_NAMES.USER),
+    });
+
+    if (!defaultRole) {
+      return res.status(500).json({ message: 'Default user role not found' });
+    }
+
     const newUser: NewUser = {
       email,
       password: hashedPassword,
+      roleId: defaultRole.id,
+      planId: defaultPlan.id,
+      storageUsed: 0,
+      storageLeft: defaultPlan.storageLimit,
     };
 
     const savedUser = await db.insert(users).values(newUser).returning();
 
-    const token = generateToken({ id: savedUser[0].id });
+    const token = await generateUserToken(savedUser[0].id);
 
-    res.status(201).json({ token });
+    res.status(201).json({
+      token,
+      user: {
+        id: savedUser[0].id,
+        email: savedUser[0].email,
+        role: defaultRole.name,
+        plan: defaultPlan.name,
+        storageLimit: defaultPlan.storageLimit,
+      }
+    });
     return;
   } catch (error) {
     console.error(error);
@@ -65,9 +109,9 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken({ id: user.id });
+    const token = await generateUserToken(user.id);
 
-    res.json({ token });
+    res.status(200).json({ token });
     return;
   } catch (error) {
     console.error(error);

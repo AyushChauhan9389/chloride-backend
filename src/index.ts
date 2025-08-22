@@ -9,20 +9,37 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 import authRoutes from './routes/auth.routes';
+import planRoutes from './routes/plan.routes';
+import roleRoutes from './routes/role.routes';
 import { authenticate } from './middleware/auth.middleware';
 
 app.use('/api/auth', authRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/roles', roleRoutes);
 
 app.get('/', (req: Request, res: Response) => {
-    res.json({ message: 'Hello from Express + TypeScript!' });
+    res.status(200).json({ message: 'Hello from Express + TypeScript!' });
+    return;
 });
 
 app.get('/api/health', (req: Request, res: Response) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+    return;
 });
 
 app.get('/api/protected', authenticate, (req: Request, res: Response) => {
-    res.json({ message: 'This is a protected route', user: (req as any).user });
+    const user = (req as any).user;
+    res.status(200).json({
+        message: 'This is a protected route',
+        user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            plan: user.plan,
+            permissions: user.permissions
+        }
+    });
+    return;
 });
 
 // Start server

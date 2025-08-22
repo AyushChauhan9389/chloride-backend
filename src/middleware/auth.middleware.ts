@@ -1,6 +1,6 @@
 
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../services/auth.service';
+import { extractUserFromToken } from '../services/auth.service';
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -9,13 +9,13 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const decoded = verifyToken(token);
+  const user = extractUserFromToken(token);
 
-  if (!decoded) {
+  if (!user) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  (req as any).user = decoded;
+  (req as any).user = user;
   next();
   return;
 };
