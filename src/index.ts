@@ -11,11 +11,13 @@ app.use(express.urlencoded({ extended: true }));
 import authRoutes from './routes/auth.routes';
 import planRoutes from './routes/plan.routes';
 import roleRoutes from './routes/role.routes';
+import uploadRoutes from './routes/upload.routes';
 import { authenticate } from './middleware/auth.middleware';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/', (req: Request, res: Response) => {
     res.status(200).json({ message: 'Hello from Express + TypeScript!' });

@@ -33,9 +33,10 @@ export const users = pgTable('users', {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, { fields: [users.roleId], references: [roles.id] }),
   plan: one(plans, { fields: [users.planId], references: [plans.id] }),
+  files: many(files),
 }));
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -44,4 +45,25 @@ export const rolesRelations = relations(roles, ({ many }) => ({
 
 export const plansRelations = relations(plans, ({ many }) => ({
   users: many(users),
+}));
+
+const files = pgTable('files' ,{
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  key: varchar('key', { length: 255 }).notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const filesUrl = pgTable('files_url', {
+  id: serial('id').primaryKey(),
+  fileId: integer('file_id').references(() => files.id).notNull(),
+  url: text('url').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Relations
+export const filesRelations = relations(files, ({ one }) => ({
+  user: one(users, { fields: [files.userId], references: [users.id] }),
 }));

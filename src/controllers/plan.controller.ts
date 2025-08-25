@@ -73,7 +73,7 @@ export const getAllPlansController = async (req: Request, res: Response) => {
 
 export const getPlanController = async (req: Request, res: Response) => {
   try {
-    const planId = parseInt(req.params.planId);
+    const planId = parseInt(req.params.planId!);
 
     if (isNaN(planId)) {
       return res.status(400).json({ message: 'Invalid plan ID' });
@@ -102,7 +102,7 @@ export const getPlanController = async (req: Request, res: Response) => {
 
 export const updatePlanController = async (req: Request, res: Response) => {
   try {
-    const planId = parseInt(req.params.planId);
+    const planId = parseInt(req.params.planId!);
     const updates = req.body;
 
     if (isNaN(planId)) {
@@ -137,7 +137,7 @@ export const updatePlanController = async (req: Request, res: Response) => {
 
 export const deletePlanController = async (req: Request, res: Response) => {
   try {
-    const planId = parseInt(req.params.planId);
+    const planId = parseInt(req.params.planId!);
 
     if (isNaN(planId)) {
       return res.status(400).json({ message: 'Invalid plan ID' });
@@ -171,16 +171,16 @@ export const assignPlanController = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Plan ID is required' });
     }
 
-    const user = await assignPlanToUser(userId, parseInt(planId));
+    const user = await assignPlanToUser(userId, parseInt(planId!));
 
     res.status(200).json({
       message: 'Plan assigned successfully',
       user: {
-        id: user.id,
-        email: user.email,
-        planId: user.planId,
-        storageUsed: user.storageUsed,
-        storageLeft: user.storageLeft,
+        id: user?.id,
+        email: user?.email,
+        planId: user?.planId,
+        storageUsed: user?.storageUsed,
+        storageLeft: user?.storageLeft,
       },
     });
     return;

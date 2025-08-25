@@ -44,7 +44,7 @@ export const createRoleController = async (req: Request, res: Response) => {
       message: 'Role created successfully',
       role: {
         ...role,
-        permissions: getRolePermissions(role),
+        permissions: getRolePermissions(role!),
       },
     });
     return;
@@ -79,7 +79,7 @@ export const getAllRolesController = async (req: Request, res: Response) => {
 
 export const getRoleController = async (req: Request, res: Response) => {
   try {
-    const roleId = parseInt(req.params.roleId);
+    const roleId = parseInt(req.params.roleId!);
 
     if (isNaN(roleId)) {
       return res.status(400).json({ message: 'Invalid role ID' });
@@ -108,7 +108,7 @@ export const getRoleController = async (req: Request, res: Response) => {
 
 export const updateRoleController = async (req: Request, res: Response) => {
   try {
-    const roleId = parseInt(req.params.roleId);
+    const roleId = parseInt(req.params.roleId!);
     const updates = req.body;
 
     if (isNaN(roleId)) {
@@ -146,7 +146,7 @@ export const updateRoleController = async (req: Request, res: Response) => {
 
 export const deleteRoleController = async (req: Request, res: Response) => {
   try {
-    const roleId = parseInt(req.params.roleId);
+    const roleId = parseInt(req.params.roleId!);
 
     if (isNaN(roleId)) {
       return res.status(400).json({ message: 'Invalid role ID' });
@@ -200,14 +200,14 @@ export const assignRoleController = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Insufficient permissions to assign roles' });
     }
 
-    const user = await assignRoleToUser(parseInt(userId), parseInt(roleId));
+    const user = await assignRoleToUser(parseInt(userId!), parseInt(roleId!));
 
     res.status(200).json({
       message: 'Role assigned successfully',
       user: {
-        id: user.id,
-        email: user.email,
-        roleId: user.roleId,
+        id: user?.id,
+        email: user?.email,
+        roleId: user?.roleId,
       },
     });
     return;
@@ -239,15 +239,15 @@ export const assignRoleByNameController = async (req: Request, res: Response) =>
       return res.status(403).json({ message: 'Insufficient permissions to assign roles' });
     }
 
-    const user = await assignRoleToUserByName(parseInt(userId), roleName as RoleName);
+    const user = await assignRoleToUserByName(parseInt(userId!), roleName as RoleName);
 
     res.status(200).json({
       message: 'Role assigned successfully',
       user: {
-        id: user.id,
-        email: user.email,
-        roleId: user.roleId,
-      },
+        id: user?.id,
+        email: user?.email,
+        roleId: user?.roleId,
+      },  
     });
     return;
   } catch (error) {

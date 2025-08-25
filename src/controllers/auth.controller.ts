@@ -37,6 +37,10 @@ export const signup = async (req: Request, res: Response) => {
     });
 
     if (!defaultPlan) {
+      return res.status(500).json({ message: 'Default plan not found' });
+    }
+
+    if (!defaultPlan) {
       // Create default plan if it doesn't exist
       const createdPlan = await db.insert(plans).values({
         name: 'Free',
@@ -60,23 +64,23 @@ export const signup = async (req: Request, res: Response) => {
       email,
       password: hashedPassword,
       roleId: defaultRole.id,
-      planId: defaultPlan.id,
+      planId: defaultPlan?.id,
       storageUsed: 0,
-      storageLeft: defaultPlan.storageLimit,
+      storageLeft: defaultPlan?.storageLimit,
     };
 
     const savedUser = await db.insert(users).values(newUser).returning();
 
-    const token = await generateUserToken(savedUser[0].id);
+    const token = await generateUserToken(savedUser[0]?.id!);
 
     res.status(201).json({
       token,
       user: {
-        id: savedUser[0].id,
-        email: savedUser[0].email,
-        role: defaultRole.name,
-        plan: defaultPlan.name,
-        storageLimit: defaultPlan.storageLimit,
+        id: savedUser[0]?.id,
+        email: savedUser[0]?.email,
+        role: defaultRole?.name,
+        plan: defaultPlan?.name,
+        storageLimit: defaultPlan?.storageLimit,
       }
     });
     return;
