@@ -4,11 +4,9 @@ import bcrypt from 'bcrypt';
 import { db } from '../db';
 import { users, plans, roles } from '../db/schema';
 import { generateUserToken } from '../services/auth.service';
-import { NewUser } from '../types/user.types';
 import { eq } from 'drizzle-orm';
-import { getPlanById } from '../services/plan.service';
-import { getRoleByName, initializeDefaultRoles } from '../services/role.service';
-import { ROLE_NAMES } from '../types/user.types';
+import { initializeDefaultRoles } from '../services/role.service';
+import { NewUser, ROLE_NAMES } from '../types/user.types';
 
 export const signup = async (req: Request, res: Response) => {
   const { email, password } = req.body;
