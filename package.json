@@ -23,6 +23,7 @@
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
+    "nanoid": "^5.1.5",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "ts-node": "^10.9.2",

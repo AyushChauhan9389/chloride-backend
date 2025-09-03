@@ -1,3 +1,5 @@
+
+
 import { Request, Response } from "express";
 import { uploadService } from "../services/upload.service";
 
@@ -9,7 +11,8 @@ class UploadController {
         }
 
         try {
-            const result = await uploadService.uploadSingle(req.file);
+            const userId = (req as any).user.id;
+            const result = await uploadService.uploadSingle(req.file, userId);
             res.status(200).json(result);
         } catch (error: any) {
             res.status(500).json({ message: error.message });
@@ -23,7 +26,8 @@ class UploadController {
         }
 
         try {
-            const result = await uploadService.uploadMultiple(req.files as Express.Multer.File[]);
+            const userId = (req as any).user.id;
+            const result = await uploadService.uploadMultiple(req.files as Express.Multer.File[], userId);
             res.status(200).json(result);
         } catch (error: any) {
             res.status(500).json({ message: error.message });

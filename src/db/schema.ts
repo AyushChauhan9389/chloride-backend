@@ -47,7 +47,7 @@ export const plansRelations = relations(plans, ({ many }) => ({
   users: many(users),
 }));
 
-const files = pgTable('files' ,{
+export const files = pgTable('files' ,{
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   key: varchar('key', { length: 255 }).notNull(),
@@ -67,3 +67,10 @@ export const filesUrl = pgTable('files_url', {
 export const filesRelations = relations(files, ({ one }) => ({
   user: one(users, { fields: [files.userId], references: [users.id] }),
 }));
+
+export const shortenedUrls = pgTable('shortened_urls', {
+  id: serial('id').primaryKey(),
+  originalUrl: text('original_url').notNull(),
+  shortCode: varchar('short_code', { length: 255 }).notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
