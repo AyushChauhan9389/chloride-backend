@@ -14,6 +14,9 @@ RUN npm install -g bun && bun install --frozen-lockfile
 # Copy the rest of the application
 COPY . .
 
+# Build the TypeScript application
+RUN bun run build
+
 # Set environment variables from .env file at build time
 # For production, you should set these through Docker environment variables instead
 # ENV NODE_ENV=production
@@ -21,5 +24,5 @@ COPY . .
 # Expose the port your app runs on
 EXPOSE 5000
 
-# Start the application (pointing to the correct path in src directory)
+# Start the application (pointing to the correct path in dist directory)
 CMD ["node", "dist/index.js"]
