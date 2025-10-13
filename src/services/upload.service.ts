@@ -1,46 +1,82 @@
 import { db } from '../db';
-import { users, files as filesTable, filesUrl } from '../db/schema';
+import { users, files as filesTable } from '../db/schema';
 import { client as s3 } from '../config/s3';
 import { v4 as uuid } from 'uuid';
 import { eq } from 'drizzle-orm';
 import { urlService } from './url.service';
+import { drive } from '../config/googleOauth';
+import { DriveUploadResponse, DriveUrlResponse } from '../types/Response.types';
 
 class UploadService {
     async uploadSingle(file: Express.Multer.File, userId: number) {
-        const key = `${userId}/${uuid()}-${file.originalname}`;
-        await s3.file(key).write(file.buffer);
-
-        const presignedUrl = await s3.presign(key, { expiresIn: 60 * 60 * 24 * 7 });
-
-        const [newFile] = await db.insert(filesTable).values({
-            name: file.originalname,
-            key,
-            size: file.size,
-            userId,
-        }).returning();
-
-        await db.insert(filesUrl).values({
-            fileId: newFile.id,
-            url: presignedUrl,
+        const user = await db.query.users.findFirst({ 
+            where: eq(users.id, userId),
+            with: {
+                plan: true
+            }
         });
-
-        const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
-
-        if (user) {
-            const newStorageUsed = user.storageUsed + file.size;
-            const newStorageLeft = user.storageLeft - file.size;
-
-            await db.update(users).set({
-                storageUsed: newStorageUsed,
-                storageLeft: newStorageLeft,
-            }).where(eq(users.id, userId));
+        if (!user) {
+            throw new Error('User not found');
         }
 
-        const shortCode = await urlService.shortenUrl(presignedUrl);
+        if(user.storageLeft < file.size) {
+            throw new Error('Storage limit exceeded');
+        }
+        
+
+        const key = `${userId}/${uuid()}-${file.originalname}`;
+        
+        const response = await drive.files.create({
+            requestBody: {
+                name: file.originalname,
+                mimeType: file.mimetype,
+            },
+            media: {
+                body: file.buffer,
+                mimeType: file.mimetype,
+            },
+        })
+        const Data = response.data as DriveUploadResponse;
+        await drive.permissions.create({
+            fileId: Data.id,
+            requestBody: {
+                role: 'reader',
+                type: 'anyone',
+            }
+        })
+        const url = await drive.files.get({
+            fileId: Data.id,
+            fields: 'webViewLink, webContentLink',
+        })
+        const DataUrl = url.data as DriveUrlResponse;
+
+        let ShortViewUrl = '';
+        let ShortDownloadUrl = '';
+        await db.transaction(async (tx) => {
+            const [newFile] = await tx.insert(filesTable).values({
+                name: file.originalname,
+                keyId: Data.id,
+                OriginalViewUrl: DataUrl.webViewLink,
+                OriginalDownloadUrl: DataUrl.webContentLink,
+                size: file.size,
+                userId,
+            })
+            const ShortViewCode = await urlService.shortenUrl(DataUrl.webViewLink)
+            const ShortContentCode = await urlService.shortenUrl(DataUrl.webContentLink)
+            ShortViewUrl = `https://${process.env.DOMAIN}/${ShortViewCode}`
+            ShortDownloadUrl = `https://${process.env.DOMAIN}/${ShortContentCode}`
+            await tx.update(filesTable).set({
+                ShortViewUrl,
+                ShortDownloadUrl
+            })
+            
+        })
 
         return { 
-            fullUrl: presignedUrl,
-            shortUrl: `http://localhost:3000/${shortCode}`
+            shortViewUrl: ShortViewUrl,
+            shortDownloadUrl: ShortDownloadUrl,
+            ViewUrl: DataUrl.webViewLink,
+            DownloadUrl: DataUrl.webContentLink
         };
     }
 

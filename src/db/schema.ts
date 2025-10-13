@@ -50,18 +50,17 @@ export const plansRelations = relations(plans, ({ many }) => ({
 export const files = pgTable('files' ,{
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
-  key: varchar('key', { length: 255 }).notNull(),
+  keyId: varchar('key_id', { length: 255 }).notNull(),
+  OriginalViewUrl: text('original_view_url').notNull(),
+  OriginalDownloadUrl: text('original_download_url').notNull(),
+  ShortViewUrl: text('short_view_url'),
+  ShortDownloadUrl: text('short_download_url'),
   size: bigint('size', { mode: 'number' }).notNull(),
   userId: integer('user_id').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export const filesUrl = pgTable('files_url', {
-  id: serial('id').primaryKey(),
-  fileId: integer('file_id').references(() => files.id).notNull(),
-  url: text('url').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+
 
 // Relations
 export const filesRelations = relations(files, ({ one }) => ({
