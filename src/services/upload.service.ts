@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { urlService } from './url.service';
 import { drive } from '../config/googleOauth';
 import { DriveUploadResponse, DriveUrlResponse } from '../types/Response.types';
+import { Readable } from 'stream';
 
 class UploadService {
     async uploadSingle(file: Express.Multer.File, userId: number) {
@@ -18,8 +19,8 @@ class UploadService {
         if (!user) {
             throw new Error('User not found');
         }
-
-        if(user.storageLeft < file.size) {
+        const fileSizeMB = file.size / (1024 * 1024);   
+        if(user.storageLeft < fileSizeMB) {
             throw new Error('Storage limit exceeded');
         }
         
@@ -32,7 +33,7 @@ class UploadService {
                 mimeType: file.mimetype,
             },
             media: {
-                body: file.buffer,
+                body: Readable.from(file.buffer),
                 mimeType: file.mimetype,
             },
         })

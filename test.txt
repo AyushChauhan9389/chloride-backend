@@ -1,0 +1,234 @@
+# Chloride Backend API Test Commands
+# Server runs on http://localhost:3000 by default
+
+# ===========================================
+# HEALTH CHECK ENDPOINTS
+# ===========================================
+
+# Health check
+curl -X GET http://localhost:3000/api/health
+
+# Root endpoint
+curl -X GET http://localhost:3000/
+
+# ===========================================
+# AUTHENTICATION ENDPOINTS
+# ===========================================
+
+# User signup
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+
+# User login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+
+# ===========================================
+# PROTECTED ENDPOINTS (Require Authentication)
+# ===========================================
+
+# Protected route (requires Bearer token)
+curl -X GET http://localhost:3000/api/protected \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# ===========================================
+# PLAN MANAGEMENT ENDPOINTS
+# ===========================================
+
+# Get all available plans (public)
+curl -X GET http://localhost:3000/api/plans/available
+
+# Get all plans (admin only)
+curl -X GET http://localhost:3000/api/plans/admin/all \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Get specific plan by ID (admin only)
+curl -X GET http://localhost:3000/api/plans/admin/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Create new plan (admin only)
+curl -X POST http://localhost:3000/api/plans/admin/create \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Premium",
+    "fileLimit": 100,
+    "storageLimit": "1GB"
+  }'
+
+# Update plan (admin only)
+curl -X PUT http://localhost:3000/api/plans/admin/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Plan",
+    "fileLimit": 50,
+    "storageLimit": "500MB"
+  }'
+
+# Delete plan (admin only)
+curl -X DELETE http://localhost:3000/api/plans/admin/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Assign plan to user
+curl -X POST http://localhost:3000/api/plans/assign \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "planId": 1
+  }'
+
+# Get user storage information
+curl -X GET http://localhost:3000/api/plans/user/storage \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Check storage limit
+curl -X POST http://localhost:3000/api/plans/user/check-storage \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bytesToAdd": 1024000
+  }'
+
+# Check file limit
+curl -X POST http://localhost:3000/api/plans/user/check-files \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currentFileCount": 5
+  }'
+
+# Update user storage (admin only)
+curl -X PUT http://localhost:3000/api/plans/admin/user-storage \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": 1,
+    "bytesToAdd": 1024000
+  }'
+
+# ===========================================
+# ROLE MANAGEMENT ENDPOINTS
+# ===========================================
+
+# Get current user's role information
+curl -X GET http://localhost:3000/api/roles/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Check user permission
+curl -X POST http://localhost:3000/api/roles/check-permission/canManageRoles \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Get all roles (admin/staff only)
+curl -X GET http://localhost:3000/api/roles/admin/all \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Get specific role by ID (admin/staff only)
+curl -X GET http://localhost:3000/api/roles/admin/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Create new role (admin only)
+curl -X POST http://localhost:3000/api/roles/admin/create \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Moderator",
+    "description": "Moderator role with limited permissions",
+    "permissions": {
+      "canManageRoles": false,
+      "canManagePlans": false,
+      "canViewAllUsers": true,
+      "canUploadFiles": true,
+      "canDeleteFiles": false
+    }
+  }'
+
+# Update role (admin only)
+curl -X PUT http://localhost:3000/api/roles/admin/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Role",
+    "description": "Updated role description",
+    "permissions": {
+      "canManageRoles": true,
+      "canManagePlans": true,
+      "canViewAllUsers": true,
+      "canUploadFiles": true,
+      "canDeleteFiles": true
+    }
+  }'
+
+# Delete role (admin only)
+curl -X DELETE http://localhost:3000/api/roles/admin/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Assign role to user by ID (admin only)
+curl -X POST http://localhost:3000/api/roles/admin/assign \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": 1,
+    "roleId": 2
+  }'
+
+# Assign role to user by name (admin only)
+curl -X POST http://localhost:3000/api/roles/admin/assign-by-name \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": 1,
+    "roleName": "ADMIN"
+  }'
+
+# Get users by role (admin/staff only)
+curl -X GET http://localhost:3000/api/roles/admin/users/USER \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# Initialize default roles (admin only)
+curl -X POST http://localhost:3000/api/roles/admin/initialize \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+
+# ===========================================
+# FILE UPLOAD ENDPOINTS
+# ===========================================
+
+# Upload single file
+curl -X POST http://localhost:3000/api/upload/single \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -F "file=@/path/to/your/file.txt"
+
+# Upload multiple files (max 10 files)
+curl -X POST http://localhost:3000/api/upload/multiple \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -F "files=@/path/to/file1.txt" \
+  -F "files=@/path/to/file2.txt" \
+  -F "files=@/path/to/file3.txt"
+
+# ===========================================
+# URL SHORTENING ENDPOINTS
+# ===========================================
+
+# Redirect to original URL (using short code)
+curl -X GET http://localhost:3000/abc123
+
+# ===========================================
+# NOTES
+# ===========================================
+
+# 1. Replace YOUR_JWT_TOKEN_HERE with actual JWT token from login response
+# 2. Replace /path/to/your/file.txt with actual file paths for upload tests
+# 3. Replace abc123 with actual short code for URL redirection test
+# 4. Some endpoints require admin privileges - ensure your user has admin role
+# 5. File upload endpoints support various file types as configured in middleware
+# 6. Storage limits and file limits are enforced based on user's plan
+# 7. All authenticated endpoints require valid JWT token in Authorization header
+# 8. Admin endpoints require user to have admin role or specific permissions

@@ -1,4 +1,7 @@
 import express, { type Request, type Response } from 'express';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,7 +25,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/', urlRoutes);
 
 app.get('/', (req: Request, res: Response) => {
-    res.status(200).json({ message: 'Hello from Express + TypeScript!' });
+    res.status(200).json({ message: 'HO HO HO' });
     return;
 });
 
