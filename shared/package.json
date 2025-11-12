@@ -1,0 +1,19 @@
+{
+  "name": "@chloride/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and types for Chloride microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "typescript": "^5.9.3"
+  }
+}
+
