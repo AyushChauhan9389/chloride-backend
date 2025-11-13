@@ -23,27 +23,27 @@ echo "📦 Installing dependencies..."
 
 # Install shared dependencies
 echo "Installing shared package..."
-cd shared && npm install && npm run build
+cd shared && bun install && bun run build
 cd ..
 
 # Install service dependencies
 echo "Installing auth-service..."
-cd auth-service && npm install
+cd auth-service && bun install
 cd ..
 
 echo "Installing writer-service..."
-cd writer-service && npm install
+cd writer-service && bun install
 cd ..
 
 echo "Installing reader-service..."
-cd reader-service && npm install
+cd reader-service && bun install
 cd ..
 
 echo ""
 echo "✅ All dependencies installed!"
 echo ""
 echo "🐳 Starting Docker services..."
-docker-compose up -d
+docker compose up -d
 
 echo ""
 echo "⏳ Waiting for services to be healthy..."
@@ -52,7 +52,7 @@ sleep 10
 echo ""
 echo "📊 Service Status:"
 echo "===================="
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "✅ Setup complete!"
@@ -65,9 +65,9 @@ echo "  - Kafka UI:       http://localhost:8088"
 echo ""
 echo "📝 Next steps:"
 echo "  1. Edit .env with your Google Drive credentials"
-echo "  2. Run database migrations: npx drizzle-kit push:pg"
+echo "  2. Run database migrations: bunx drizzle-kit push:pg"
 echo "  3. Test the health endpoints"
 echo ""
-echo "🔍 View logs: docker-compose logs -f"
-echo "🛑 Stop services: docker-compose down"
+echo "🔍 View logs: docker compose logs -f"
+echo "🛑 Stop services: docker compose down"
 

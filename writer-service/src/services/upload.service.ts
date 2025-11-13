@@ -145,7 +145,7 @@ export const uploadSingle = async (file: Express.Multer.File, userId: number) =>
       shortDownloadUrl,
       timestamp: new Date().toISOString(),
     };
-    await kafkaClient.sendMessage(KafkaTopics.FILE_UPLOADED, `file-${fileId}`, fileEvent);
+    await kafkaClient.sendMessage(KafkaTopics.FILE_UPLOADED, `file-${fileId!}`, fileEvent);
   } catch (error) {
     console.error('Failed to publish file uploaded event:', error);
   }
