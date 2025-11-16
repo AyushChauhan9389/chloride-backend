@@ -19,6 +19,19 @@ The Chloride backend is organized into multiple microservices:
 - **Writer Service**: Handles file uploads (write operations)
 - **Main Service**: Monolithic service containing all functionality
 
+### Base URLs
+
+Each service runs on a different port (default values, can be configured via environment variables):
+
+| Service | Default Port | Base URL (Development) | Base URL (Production) |
+|---------|--------------|------------------------|----------------------|
+| **Main Service** | 3000 | `http://localhost:3000` | `https://api.yourdomain.com` |
+| **Auth Service** | 8082 | `http://localhost:8082` | `https://auth.yourdomain.com` |
+| **Reader Service** | 8080 | `http://localhost:8080` | `https://reader.yourdomain.com` |
+| **Writer Service** | 8081 | `http://localhost:8081` | `https://writer.yourdomain.com` |
+
+**Note**: Replace `yourdomain.com` with your actual production domain.
+
 ---
 
 ## Database Schemas
@@ -118,61 +131,75 @@ shortenedUrls {
 ## API Routes
 
 ### Auth Service Routes
-**Base Path**: `/auth` (in auth-service)
+**Base URL**: `http://localhost:8082` (Development) | `https://auth.yourdomain.com` (Production)
 
 #### Authentication Endpoints
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/signup` | - | `signup` | Create a new user account |
-| POST | `/login` | - | `login` | Authenticate user and get token |
-| POST | `/verify` | - | `verifyToken` | Verify JWT token validity |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/auth/signup` | `http://localhost:8082/api/auth/signup` | - | `signup` | Create a new user account |
+| POST | `/api/auth/login` | `http://localhost:8082/api/auth/login` | - | `login` | Authenticate user and get token |
+| POST | `/api/auth/verify` | `http://localhost:8082/api/auth/verify` | - | `verifyToken` | Verify JWT token validity |
 
 **Request/Response Examples**:
 
 ```javascript
-// POST /signup
-Request: { email: string, password: string }
+// POST http://localhost:8082/api/auth/signup
+Request Body: {
+  email: string,
+  password: string
+}
 Response: {
   token: string,
   user: { id, email, role, plan, storageLimit }
 }
 
-// POST /login
-Request: { email: string, password: string }
+// POST http://localhost:8082/api/auth/login
+Request Body: {
+  email: string,
+  password: string
+}
 Response: {
   token: string,
   user: { id, email, role, plan }
 }
 
-// POST /verify
-Headers: { Authorization: "Bearer <token>" }
-Response: { valid: boolean, user: <decoded_token> }
+// POST http://localhost:8082/api/auth/verify
+Headers: {
+  Authorization: "Bearer <token>"
+}
+Response: {
+  valid: boolean,
+  user: <decoded_token>
+}
 ```
 
 ---
 
 ### Main Service Routes
+**Base URL**: `http://localhost:3000` (Development) | `https://api.yourdomain.com` (Production)
 
 #### Auth Routes (`src/routes/auth.routes.ts`)
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/signup` | - | `signup` | Create a new user account |
-| POST | `/login` | - | `login` | Authenticate user and get token |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/auth/signup` | `http://localhost:3000/api/auth/signup` | - | `signup` | Create a new user account |
+| POST | `/api/auth/login` | `http://localhost:3000/api/auth/login` | - | `login` | Authenticate user and get token |
 
 #### URL Routes (`src/routes/url.routes.ts`)
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| GET | `/:shortCode` | - | `urlController.redirect` | Redirect to original URL |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| GET | `/:shortCode` | `http://localhost:3000/:shortCode` | - | `urlController.redirect` | Redirect to original URL |
+
+**Example**: `http://localhost:3000/abc123` redirects to the original URL associated with shortCode `abc123`
 
 #### Upload Routes (`src/routes/upload.routes.ts`)
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/single` | `authenticate`, `uploadSingle("file")` | `uploadController.uploadSingle` | Upload a single file |
-| POST | `/multiple` | `authenticate`, `uploadMultiple("files", 10)` | `uploadController.uploadMultiple` | Upload multiple files (max 10) |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/upload/single` | `http://localhost:3000/api/upload/single` | `authenticate`, `uploadSingle("file")` | `uploadController.uploadSingle` | Upload a single file |
+| POST | `/api/upload/multiple` | `http://localhost:3000/api/upload/multiple` | `authenticate`, `uploadMultiple("files", 10)` | `uploadController.uploadMultiple` | Upload multiple files (max 10) |
 
 #### Role Routes (`src/routes/role.routes.ts`)
 
@@ -180,81 +207,109 @@ All role routes require authentication.
 
 **Public User Routes**:
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| GET | `/me` | `authenticate` | `getCurrentUserRoleController` | Get current user's role info |
-| POST | `/check-permission/:permission` | `authenticate` | `checkPermissionController` | Check if user has a permission |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| GET | `/api/roles/me` | `http://localhost:3000/api/roles/me` | `authenticate` | `getCurrentUserRoleController` | Get current user's role info |
+| POST | `/api/roles/check-permission/:permission` | `http://localhost:3000/api/roles/check-permission/:permission` | `authenticate` | `checkPermissionController` | Check if user has a permission |
 
 **Admin Routes**:
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/admin/create` | `authenticate`, `requireAdmin`, `logAdminAction('CREATE_ROLE')` | `createRoleController` | Create a new role |
-| GET | `/admin/all` | `authenticate`, `requireAdminOrStaff` | `getAllRolesController` | Get all roles |
-| GET | `/admin/:roleId` | `authenticate`, `requireAdminOrStaff` | `getRoleController` | Get role by ID |
-| PUT | `/admin/:roleId` | `authenticate`, `requireAdmin`, `logAdminAction('UPDATE_ROLE')` | `updateRoleController` | Update a role |
-| DELETE | `/admin/:roleId` | `authenticate`, `requireAdmin`, `logAdminAction('DELETE_ROLE')` | `deleteRoleController` | Delete a role |
-| POST | `/admin/assign` | `authenticate`, `requireAdmin`, `logAdminAction('ASSIGN_ROLE')` | `assignRoleController` | Assign role to user by ID |
-| POST | `/admin/assign-by-name` | `authenticate`, `requireAdmin`, `logAdminAction('ASSIGN_ROLE_BY_NAME')` | `assignRoleByNameController` | Assign role to user by name |
-| GET | `/admin/users/:roleName` | `authenticate`, `requireAdminOrStaff` | `getUsersByRoleController` | Get all users with a role |
-| POST | `/admin/initialize` | `authenticate`, `requireAdmin`, `logAdminAction('INITIALIZE_ROLES')` | `initializeRolesController` | Initialize default roles |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/roles/admin/create` | `http://localhost:3000/api/roles/admin/create` | `authenticate`, `requireAdmin`, `logAdminAction('CREATE_ROLE')` | `createRoleController` | Create a new role |
+| GET | `/api/roles/admin/all` | `http://localhost:3000/api/roles/admin/all` | `authenticate`, `requireAdminOrStaff` | `getAllRolesController` | Get all roles |
+| GET | `/api/roles/admin/:roleId` | `http://localhost:3000/api/roles/admin/:roleId` | `authenticate`, `requireAdminOrStaff` | `getRoleController` | Get role by ID |
+| PUT | `/api/roles/admin/:roleId` | `http://localhost:3000/api/roles/admin/:roleId` | `authenticate`, `requireAdmin`, `logAdminAction('UPDATE_ROLE')` | `updateRoleController` | Update a role |
+| DELETE | `/api/roles/admin/:roleId` | `http://localhost:3000/api/roles/admin/:roleId` | `authenticate`, `requireAdmin`, `logAdminAction('DELETE_ROLE')` | `deleteRoleController` | Delete a role |
+| POST | `/api/roles/admin/assign` | `http://localhost:3000/api/roles/admin/assign` | `authenticate`, `requireAdmin`, `logAdminAction('ASSIGN_ROLE')` | `assignRoleController` | Assign role to user by ID |
+| POST | `/api/roles/admin/assign-by-name` | `http://localhost:3000/api/roles/admin/assign-by-name` | `authenticate`, `requireAdmin`, `logAdminAction('ASSIGN_ROLE_BY_NAME')` | `assignRoleByNameController` | Assign role to user by name |
+| GET | `/api/roles/admin/users/:roleName` | `http://localhost:3000/api/roles/admin/users/:roleName` | `authenticate`, `requireAdminOrStaff` | `getUsersByRoleController` | Get all users with a role |
+| POST | `/api/roles/admin/initialize` | `http://localhost:3000/api/roles/admin/initialize` | `authenticate`, `requireAdmin`, `logAdminAction('INITIALIZE_ROLES')` | `initializeRolesController` | Initialize default roles |
 
 #### Plan Routes (`src/routes/plan.routes.ts`)
 
 **Public Routes**:
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| GET | `/available` | - | `getAllPlansController` | Get all available plans (no auth) |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| GET | `/api/plans/available` | `http://localhost:3000/api/plans/available` | - | `getAllPlansController` | Get all available plans (no auth) |
 
 **User Routes**:
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/assign` | `authenticate` | `assignPlanController` | Assign plan to current user |
-| GET | `/user/storage` | `authenticate` | `getUserStorageController` | Get user's storage info |
-| POST | `/user/check-storage` | `authenticate` | `checkStorageLimitController` | Check if within storage limit |
-| POST | `/user/check-files` | `authenticate` | `checkFileLimitController` | Check if within file limit |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/plans/assign` | `http://localhost:3000/api/plans/assign` | `authenticate` | `assignPlanController` | Assign plan to current user |
+| GET | `/api/plans/user/storage` | `http://localhost:3000/api/plans/user/storage` | `authenticate` | `getUserStorageController` | Get user's storage info |
+| POST | `/api/plans/user/check-storage` | `http://localhost:3000/api/plans/user/check-storage` | `authenticate` | `checkStorageLimitController` | Check if within storage limit |
+| POST | `/api/plans/user/check-files` | `http://localhost:3000/api/plans/user/check-files` | `authenticate` | `checkFileLimitController` | Check if within file limit |
 
 **Admin Routes**:
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/admin/create` | `authenticate`, `requireAdmin`, `logAdminAction('CREATE_PLAN')` | `createPlanController` | Create a new plan |
-| GET | `/admin/all` | `authenticate`, `requireAdmin` | `getAllPlansController` | Get all plans |
-| GET | `/admin/:planId` | `authenticate`, `requireAdmin` | `getPlanController` | Get plan by ID |
-| PUT | `/admin/:planId` | `authenticate`, `requireAdmin`, `logAdminAction('UPDATE_PLAN')` | `updatePlanController` | Update a plan |
-| DELETE | `/admin/:planId` | `authenticate`, `requireAdmin`, `logAdminAction('DELETE_PLAN')` | `deletePlanController` | Delete a plan |
-| PUT | `/admin/user-storage` | `authenticate`, `requireAdmin`, `logAdminAction('UPDATE_USER_STORAGE')` | `updateUserStorageController` | Update user storage |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/plans/admin/create` | `http://localhost:3000/api/plans/admin/create` | `authenticate`, `requireAdmin`, `logAdminAction('CREATE_PLAN')` | `createPlanController` | Create a new plan |
+| GET | `/api/plans/admin/all` | `http://localhost:3000/api/plans/admin/all` | `authenticate`, `requireAdmin` | `getAllPlansController` | Get all plans |
+| GET | `/api/plans/admin/:planId` | `http://localhost:3000/api/plans/admin/:planId` | `authenticate`, `requireAdmin` | `getPlanController` | Get plan by ID |
+| PUT | `/api/plans/admin/:planId` | `http://localhost:3000/api/plans/admin/:planId` | `authenticate`, `requireAdmin`, `logAdminAction('UPDATE_PLAN')` | `updatePlanController` | Update a plan |
+| DELETE | `/api/plans/admin/:planId` | `http://localhost:3000/api/plans/admin/:planId` | `authenticate`, `requireAdmin`, `logAdminAction('DELETE_PLAN')` | `deletePlanController` | Delete a plan |
+| PUT | `/api/plans/admin/user-storage` | `http://localhost:3000/api/plans/admin/user-storage` | `authenticate`, `requireAdmin`, `logAdminAction('UPDATE_USER_STORAGE')` | `updateUserStorageController` | Update user storage |
 
 ---
 
 ### Reader Service Routes
+**Base URL**: `http://localhost:8080` (Development) | `https://reader.yourdomain.com` (Production)
 
 #### URL Routes (`reader-service/src/routes/url.routes.ts`)
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| GET | `/:shortCode` | - | `redirect` | Redirect to original URL |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| GET | `/:shortCode` | `http://localhost:8080/:shortCode` | - | `redirect` | Redirect to original URL |
+
+**Example**: `http://localhost:8080/abc123` redirects to the original URL
 
 #### File Routes (`reader-service/src/routes/file.routes.ts`)
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| GET | `/my-files` | `authenticate` | `getUserFiles` | Get current user's files |
-| GET | `/all` | `authenticate` | `listAllFiles` | Get all files (admin only) |
-| GET | `/:fileId` | `authenticate` | `getFile` | Get file by ID |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| GET | `/api/files/my-files` | `http://localhost:8080/api/files/my-files` | `authenticate` | `getUserFiles` | Get current user's files |
+| GET | `/api/files/all` | `http://localhost:8080/api/files/all` | `authenticate` | `listAllFiles` | Get all files (admin only) |
+| GET | `/api/files/:fileId` | `http://localhost:8080/api/files/:fileId` | `authenticate` | `getFile` | Get file by ID |
 
 ---
 
 ### Writer Service Routes
+**Base URL**: `http://localhost:8081` (Development) | `https://writer.yourdomain.com` (Production)
 
 #### Upload Routes (`writer-service/src/routes/upload.routes.ts`)
 
-| Method | Route | Middleware | Controller | Description |
-|--------|-------|------------|------------|-------------|
-| POST | `/single` | `authenticate`, `uploadSingle('file')` | `uploadSingleFile` | Upload a single file |
-| POST | `/multiple` | `authenticate`, `uploadMultiple('files', 10)` | `uploadMultipleFiles` | Upload multiple files (max 10) |
+| Method | Endpoint Path | Full URL (Dev) | Middleware | Controller | Description |
+|--------|--------------|----------------|------------|------------|-------------|
+| POST | `/api/upload/single` | `http://localhost:8081/api/upload/single` | `authenticate`, `uploadSingle('file')` | `uploadSingleFile` | Upload a single file |
+| POST | `/api/upload/multiple` | `http://localhost:8081/api/upload/multiple` | `authenticate`, `uploadMultiple('files', 10)` | `uploadMultipleFiles` | Upload multiple files (max 10) |
+
+**Upload Request Examples**:
+
+```javascript
+// Single file upload
+// POST http://localhost:8081/api/upload/single
+// Content-Type: multipart/form-data
+Headers: {
+  Authorization: "Bearer <token>"
+}
+Body (form-data): {
+  file: <File object>
+}
+
+// Multiple file upload
+// POST http://localhost:8081/api/upload/multiple
+// Content-Type: multipart/form-data
+Headers: {
+  Authorization: "Bearer <token>"
+}
+Body (form-data): {
+  files: [<File object>, <File object>, ...]  // Max 10 files
+}
+```
 
 ---
 
@@ -850,3 +905,190 @@ All error responses follow the format:
 - JWT tokens are signed with a secret key
 - File uploads use multer middleware
 - Database uses Drizzle ORM with PostgreSQL
+
+---
+
+## Quick API Reference
+
+This section provides a complete list of all API endpoints for easy frontend integration.
+
+### Authentication (No Auth Required)
+
+| Endpoint | Method | Service | URL (Dev) |
+|----------|--------|---------|-----------|
+| User Signup | POST | Auth Service | `http://localhost:8082/api/auth/signup` |
+| User Login | POST | Auth Service | `http://localhost:8082/api/auth/login` |
+| Verify Token | POST | Auth Service | `http://localhost:8082/api/auth/verify` |
+| User Signup | POST | Main Service | `http://localhost:3000/api/auth/signup` |
+| User Login | POST | Main Service | `http://localhost:3000/api/auth/login` |
+| Get Available Plans | GET | Main Service | `http://localhost:3000/api/plans/available` |
+| URL Redirect | GET | Main Service | `http://localhost:3000/:shortCode` |
+| URL Redirect | GET | Reader Service | `http://localhost:8080/:shortCode` |
+
+### File Operations (Auth Required)
+
+| Endpoint | Method | Service | URL (Dev) |
+|----------|--------|---------|-----------|
+| Upload Single File | POST | Main Service | `http://localhost:3000/api/upload/single` |
+| Upload Multiple Files | POST | Main Service | `http://localhost:3000/api/upload/multiple` |
+| Upload Single File | POST | Writer Service | `http://localhost:8081/api/upload/single` |
+| Upload Multiple Files | POST | Writer Service | `http://localhost:8081/api/upload/multiple` |
+| Get My Files | GET | Reader Service | `http://localhost:8080/api/files/my-files` |
+| Get File by ID | GET | Reader Service | `http://localhost:8080/api/files/:fileId` |
+| Get All Files (Admin) | GET | Reader Service | `http://localhost:8080/api/files/all` |
+
+### User & Role Management (Auth Required)
+
+| Endpoint | Method | Service | URL (Dev) |
+|----------|--------|---------|-----------|
+| Get My Role | GET | Main Service | `http://localhost:3000/api/roles/me` |
+| Check Permission | POST | Main Service | `http://localhost:3000/api/roles/check-permission/:permission` |
+| Get My Storage Info | GET | Main Service | `http://localhost:3000/api/plans/user/storage` |
+| Check Storage Limit | POST | Main Service | `http://localhost:3000/api/plans/user/check-storage` |
+| Check File Limit | POST | Main Service | `http://localhost:3000/api/plans/user/check-files` |
+| Assign Plan to Self | POST | Main Service | `http://localhost:3000/api/plans/assign` |
+
+### Admin - Role Management (Admin/Staff Auth Required)
+
+| Endpoint | Method | Service | URL (Dev) | Access Level |
+|----------|--------|---------|-----------|--------------|
+| Create Role | POST | Main Service | `http://localhost:3000/api/roles/admin/create` | Admin |
+| Get All Roles | GET | Main Service | `http://localhost:3000/api/roles/admin/all` | Admin/Staff |
+| Get Role by ID | GET | Main Service | `http://localhost:3000/api/roles/admin/:roleId` | Admin/Staff |
+| Update Role | PUT | Main Service | `http://localhost:3000/api/roles/admin/:roleId` | Admin |
+| Delete Role | DELETE | Main Service | `http://localhost:3000/api/roles/admin/:roleId` | Admin |
+| Assign Role by ID | POST | Main Service | `http://localhost:3000/api/roles/admin/assign` | Admin |
+| Assign Role by Name | POST | Main Service | `http://localhost:3000/api/roles/admin/assign-by-name` | Admin |
+| Get Users by Role | GET | Main Service | `http://localhost:3000/api/roles/admin/users/:roleName` | Admin/Staff |
+| Initialize Default Roles | POST | Main Service | `http://localhost:3000/api/roles/admin/initialize` | Admin |
+
+### Admin - Plan Management (Admin Auth Required)
+
+| Endpoint | Method | Service | URL (Dev) |
+|----------|--------|---------|-----------|
+| Create Plan | POST | Main Service | `http://localhost:3000/api/plans/admin/create` |
+| Get All Plans | GET | Main Service | `http://localhost:3000/api/plans/admin/all` |
+| Get Plan by ID | GET | Main Service | `http://localhost:3000/api/plans/admin/:planId` |
+| Update Plan | PUT | Main Service | `http://localhost:3000/api/plans/admin/:planId` |
+| Delete Plan | DELETE | Main Service | `http://localhost:3000/api/plans/admin/:planId` |
+| Update User Storage | PUT | Main Service | `http://localhost:3000/api/plans/admin/user-storage` |
+
+### Health Check Endpoints
+
+| Endpoint | Method | Service | URL (Dev) |
+|----------|--------|---------|-----------|
+| Main Service Health | GET | Main Service | `http://localhost:3000/api/health` |
+| Auth Service Health | GET | Auth Service | `http://localhost:8082/health` |
+| Reader Service Health | GET | Reader Service | `http://localhost:8080/health` |
+| Writer Service Health | GET | Writer Service | `http://localhost:8081/health` |
+
+---
+
+## Frontend Integration Guide
+
+### Setting Up Base URLs
+
+In your frontend application, configure the base URLs as environment variables:
+
+```javascript
+// .env.development
+VITE_MAIN_API_URL=http://localhost:3000
+VITE_AUTH_API_URL=http://localhost:8082
+VITE_READER_API_URL=http://localhost:8080
+VITE_WRITER_API_URL=http://localhost:8081
+
+// .env.production
+VITE_MAIN_API_URL=https://api.yourdomain.com
+VITE_AUTH_API_URL=https://auth.yourdomain.com
+VITE_READER_API_URL=https://reader.yourdomain.com
+VITE_WRITER_API_URL=https://writer.yourdomain.com
+```
+
+### Authentication Header
+
+For all authenticated endpoints, include the JWT token in the Authorization header:
+
+```javascript
+headers: {
+  'Authorization': `Bearer ${token}`,
+  'Content-Type': 'application/json'
+}
+```
+
+### Example API Calls
+
+```javascript
+// Signup
+const signup = async (email, password) => {
+  const response = await fetch(`${VITE_AUTH_API_URL}/api/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  return response.json();
+};
+
+// Login
+const login = async (email, password) => {
+  const response = await fetch(`${VITE_AUTH_API_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  return response.json();
+};
+
+// Upload File
+const uploadFile = async (file, token) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${VITE_WRITER_API_URL}/api/upload/single`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+  return response.json();
+};
+
+// Get My Files
+const getMyFiles = async (token) => {
+  const response = await fetch(`${VITE_READER_API_URL}/api/files/my-files`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.json();
+};
+
+// Get User Storage Info
+const getStorageInfo = async (token) => {
+  const response = await fetch(`${VITE_MAIN_API_URL}/api/plans/user/storage`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.json();
+};
+```
+
+### Service Selection Guide
+
+**When to use which service:**
+
+- **Auth Service** (`8082`): Use for authentication operations (signup, login, verify token)
+- **Main Service** (`3000`): Use for role management, plan management, and general operations
+- **Reader Service** (`8080`): Use for file retrieval and URL redirections (read operations)
+- **Writer Service** (`8081`): Use for file uploads (write operations)
+
+**Recommended approach:**
+- For **Authentication**: Use Auth Service for better separation of concerns
+- For **File Uploads**: Use Writer Service for optimized write operations
+- For **File Retrieval**: Use Reader Service for optimized read operations
+- For **Everything Else**: Use Main Service (roles, plans, etc.)
+
+---
