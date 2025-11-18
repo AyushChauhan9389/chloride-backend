@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from 'express';
-import cors from 'cors';
+import cors, { type CorsOptions } from "cors";
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import { initializeDefaultRoles } from './services/role.service';
@@ -10,12 +10,26 @@ const app = express();
 const PORT = process.env.PORT || 8082;
 
 // Middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+const allowedOrigins = ["http://localhost:3000", "*"];
+
+const corsOptions: CorsOptions = {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) => {
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
