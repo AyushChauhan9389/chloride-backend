@@ -106,9 +106,10 @@ export const uploadSingle = async (file: Express.Multer.File, userId: number) =>
       })
       .where(eq(filesTable.id, fileId));
 
-    // Update user storage (stored in MB)
-    const newStorageUsed = user.storageUsed + fileSizeMB;
-    const newStorageLeft = user.storageLeft - fileSizeMB;
+    // Update user storage (stored in MB as integers)
+    const fileSizeMBRounded = Math.ceil(fileSizeMB);
+    const newStorageUsed = user.storageUsed + fileSizeMBRounded;
+    const newStorageLeft = user.storageLeft - fileSizeMBRounded;
 
     await tx.update(users)
       .set({
