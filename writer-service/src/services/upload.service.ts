@@ -35,7 +35,10 @@ export const uploadSingle = async (file: Express.Multer.File, userId: number) =>
 
   // Check storage limits
   const fileSizeBytes = file.size;
-  if (user.storageLeft < fileSizeBytes) {
+  const fileSizeMB = fileSizeBytes / (1024 * 1024);
+
+  // storageLeft is stored in MB, so convert for comparison
+  if (user.storageLeft < fileSizeMB) {
     throw new Error('Storage limit exceeded');
   }
 
@@ -103,9 +106,9 @@ export const uploadSingle = async (file: Express.Multer.File, userId: number) =>
       })
       .where(eq(filesTable.id, fileId));
 
-    // Update user storage
-    const newStorageUsed = user.storageUsed + fileSizeBytes;
-    const newStorageLeft = user.storageLeft - fileSizeBytes;
+    // Update user storage (stored in MB)
+    const newStorageUsed = user.storageUsed + fileSizeMB;
+    const newStorageLeft = user.storageLeft - fileSizeMB;
 
     await tx.update(users)
       .set({
