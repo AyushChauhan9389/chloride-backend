@@ -19,15 +19,15 @@ const router = Router();
 // All plan routes require authentication
 router.use(authenticate);
 
-// Admin routes for plan management (protected with admin middleware)
+// Admin routes for plan management - specific paths must come before parameterized paths
 router.post('/admin/create', requireAdmin, logAdminAction('CREATE_PLAN'), createPlanController);
 router.get('/admin/all', requireAdmin, getAllPlansController);
+router.put('/admin/user-storage', requireAdmin, logAdminAction('UPDATE_USER_STORAGE'), updateUserStorageController);
+
+// Parameterized routes must come last
 router.get('/admin/:planId', requireAdmin, getPlanController);
 router.put('/admin/:planId', requireAdmin, logAdminAction('UPDATE_PLAN'), updatePlanController);
 router.delete('/admin/:planId', requireAdmin, logAdminAction('DELETE_PLAN'), deletePlanController);
-
-// Admin route to update user storage (for file operations)
-router.put('/admin/user-storage', requireAdmin, logAdminAction('UPDATE_USER_STORAGE'), updateUserStorageController);
 
 // User routes for plan and storage management
 router.post('/assign', assignPlanController);

@@ -172,7 +172,6 @@ export const logAdminAction = (action: string) => {
         query: req.query,
         params: req.params
       });
-      return;
     }
 
     next();
