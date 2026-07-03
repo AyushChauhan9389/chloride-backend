@@ -1,11 +1,9 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { openapi } from '@elysiajs/openapi';
-import { eq } from 'drizzle-orm';
-import { db } from './db';
-import { plans } from './db/schema';
 import { authPlugin } from './plugins/auth';
 import { initializeDefaultRoles } from './modules/roles/service';
+import { initializeDefaultPlans } from './modules/plans/service';
 import { authModule } from './modules/auth';
 import { rolesModule } from './modules/roles';
 import { plansModule } from './modules/plans';
@@ -15,19 +13,11 @@ import { urlsModule } from './modules/urls';
 
 const PORT = Number(process.env.PORT ?? 8080);
 
-// Seed default roles and the Free plan so signup works out of the box.
+// Seed default roles and plans (Free, Pro, Max) so signup works out of the box.
 const bootstrap = async () => {
   try {
     await initializeDefaultRoles();
-    const freePlan = await db.query.plans.findFirst({ where: eq(plans.name, 'Free') });
-    if (!freePlan) {
-      await db.insert(plans).values({
-        name: 'Free',
-        fileLimit: 10,
-        storageLimit: 100 * 1024 * 1024, // 100MB
-      });
-      console.log('Created default plan: Free');
-    }
+    await initializeDefaultPlans();
   } catch (error) {
     console.error('Bootstrap failed:', error);
   }

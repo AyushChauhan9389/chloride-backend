@@ -66,7 +66,7 @@ Routes opt into auth via the `auth` macro:
 | Auth   | `POST /api/auth/signup`, `POST /api/auth/login`, `GET /api/auth/verify` |
 | Roles  | `GET /api/roles/me`, `POST /api/roles/check-permission/:permission`, `*/api/roles/admin/*` |
 | Plans  | `GET /api/plans/available`, `POST /api/plans/assign`, `GET /api/plans/user/storage`, `*/api/plans/admin/*` |
-| Upload | `POST /api/upload/single`, `POST /api/upload/multiple` |
+| Upload | `POST /api/upload/single`, `POST /api/upload/multiple` (through-API); `POST /api/upload/presign` → client PUTs to S3 → `POST /api/upload/complete` (direct-to-S3) |
 | Files  | `GET /api/files/my-files`, `GET /api/files/all`, `GET /api/files/:fileId` |
 | URLs   | `GET /:shortCode` (redirect) |
 | Misc   | `GET /api/health`, `GET /api/protected` |

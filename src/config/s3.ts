@@ -23,5 +23,10 @@ export const s3 = new S3Client({
   endpoint: process.env.S3_ENDPOINT,
 });
 
-// How long presigned URLs stay valid, in seconds (default 7 days).
+// How long presigned download/view URLs stay valid, in seconds (default 7 days).
 export const PRESIGN_EXPIRES_IN = Number(process.env.S3_PRESIGN_EXPIRES_IN ?? 60 * 60 * 24 * 7);
+
+// How long presigned upload (PUT) URLs stay valid, in seconds (default 15 min).
+export const UPLOAD_PRESIGN_EXPIRES_IN = Number(
+  process.env.S3_UPLOAD_PRESIGN_EXPIRES_IN ?? 60 * 15
+);

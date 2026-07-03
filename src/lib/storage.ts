@@ -1,6 +1,12 @@
 // Storage size formatting/parsing helpers
 
+// Sentinel value for "unlimited" storage/file limits.
+export const UNLIMITED = -1;
+
+export const isUnlimited = (limit: number): boolean => limit < 0;
+
 export const formatBytes = (bytes: number): string => {
+  if (isUnlimited(bytes)) return 'Unlimited';
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
