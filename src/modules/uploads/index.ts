@@ -6,6 +6,11 @@ import { completeBody, presignBody, singleUploadBody, multiUploadBody } from './
 const fail = (error: unknown) =>
   status(500, { message: error instanceof Error ? error.message : 'Upload failed' });
 
+const parseExpiresIn = (value: string | number | undefined): number | undefined => {
+  if (value === undefined) return undefined;
+  return typeof value === 'string' ? parseInt(value, 10) : value;
+};
+
 export const uploadsModule = new Elysia({ prefix: '/api/upload', tags: ['Uploads'] })
   .use(authPlugin)
   // --- Flow 1: upload through the API ---
@@ -13,7 +18,7 @@ export const uploadsModule = new Elysia({ prefix: '/api/upload', tags: ['Uploads
     '/single',
     async ({ user, body }) => {
       try {
-        return await uploadSingle(body.file, user.id, body.expiresIn);
+        return await uploadSingle(body.file, user.id, parseExpiresIn(body.expiresIn));
       } catch (error) {
         return fail(error);
       }
@@ -25,7 +30,7 @@ export const uploadsModule = new Elysia({ prefix: '/api/upload', tags: ['Uploads
     async ({ user, body }) => {
       const files = Array.isArray(body.files) ? body.files : [body.files];
       try {
-        return await uploadMultiple(files, user.id, body.expiresIn);
+        return await uploadMultiple(files, user.id, parseExpiresIn(body.expiresIn));
       } catch (error) {
         return fail(error);
       }
@@ -51,7 +56,7 @@ export const uploadsModule = new Elysia({ prefix: '/api/upload', tags: ['Uploads
     '/complete',
     async ({ user, body }) => {
       try {
-        return await completeUpload(user.id, body.key, body.name, body.expiresIn);
+        return await completeUpload(user.id, body.key, body.name, parseExpiresIn(body.expiresIn));
       } catch (error) {
         return fail(error);
       }
