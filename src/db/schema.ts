@@ -55,6 +55,12 @@ export const shortenedUrls = pgTable('shortened_urls', {
   keyId: varchar('key_id', { length: 255 }),
   // 'view' (inline) or 'download' (attachment) presign variant.
   variant: varchar('variant', { length: 16 }),
+  // How long (seconds) the cached presigned URL stays valid. Enables lazy
+  // regeneration: on redirect we reuse originalUrl until it expires, then
+  // regenerate from keyId with the same expiresIn and update the row.
+  expiresIn: integer('expires_in'),
+  // When the currently cached presigned URL was generated.
+  presignedAt: timestamp('presigned_at', { mode: 'date' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

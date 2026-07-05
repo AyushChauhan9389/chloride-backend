@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { files as filesTable, users } from '../../db/schema';
-import { s3, UPLOAD_PRESIGN_EXPIRES_IN } from '../../config/s3';
+import { s3, UPLOAD_PRESIGN_EXPIRES_IN, clampPresignExpiry } from '../../config/s3';
 import { isUnlimited } from '../../lib/storage';
 import { checkUserFileLimit, checkUserStorageLimit, updateUserStorage } from '../plans/service';
 import { presignForKey, shortenUrl } from '../urls/service';
@@ -13,6 +13,7 @@ export interface UploadResult {
   shortDownloadUrl: string;
   ViewUrl: string;
   DownloadUrl: string;
+  expiresIn: number;
 }
 
 export interface PresignResult {
@@ -42,10 +43,13 @@ const finalizeUpload = async (
   userId: number,
   key: string,
   name: string,
-  size: number
+  size: number,
+  expiresIn?: number
 ): Promise<UploadResult> => {
-  const viewUrl = presignForKey(key, 'view');
-  const downloadUrl = presignForKey(key, 'download');
+  const expiry = clampPresignExpiry(expiresIn);
+
+  const viewUrl = presignForKey(key, 'view', expiry);
+  const downloadUrl = presignForKey(key, 'download', expiry);
 
   const [newFile] = await db
     .insert(filesTable)
@@ -59,8 +63,8 @@ const finalizeUpload = async (
     })
     .returning();
 
-  const shortViewCode = await shortenUrl(viewUrl, { keyId: key, variant: 'view' });
-  const shortDownloadCode = await shortenUrl(downloadUrl, { keyId: key, variant: 'download' });
+  const shortViewCode = await shortenUrl(viewUrl, { keyId: key, variant: 'view', expiresIn: expiry });
+  const shortDownloadCode = await shortenUrl(downloadUrl, { keyId: key, variant: 'download', expiresIn: expiry });
   const shortViewUrl = `https://${domain()}/${shortViewCode}`;
   const shortDownloadUrl = `https://${domain()}/${shortDownloadCode}`;
 
@@ -77,24 +81,25 @@ const finalizeUpload = async (
     shortDownloadUrl,
     ViewUrl: viewUrl,
     DownloadUrl: downloadUrl,
+    expiresIn: expiry,
   };
 };
 
 // --- Flow 1: upload through the API (client -> server -> S3) ---
-export const uploadSingle = async (file: File, userId: number): Promise<UploadResult> => {
+export const uploadSingle = async (file: File, userId: number, expiresIn?: number): Promise<UploadResult> => {
   await assertQuota(userId, file.size);
 
   const key = buildKey(userId, file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
   await s3.write(key, buffer, { type: file.type || 'application/octet-stream' });
 
-  return finalizeUpload(userId, key, file.name, file.size);
+  return finalizeUpload(userId, key, file.name, file.size, expiresIn);
 };
 
-export const uploadMultiple = async (files: File[], userId: number): Promise<UploadResult[]> => {
+export const uploadMultiple = async (files: File[], userId: number, expiresIn?: number): Promise<UploadResult[]> => {
   const results: UploadResult[] = [];
   for (const file of files) {
-    results.push(await uploadSingle(file, userId));
+    results.push(await uploadSingle(file, userId, expiresIn));
   }
   return results;
 };
@@ -127,7 +132,8 @@ export const presignUpload = async (
 export const completeUpload = async (
   userId: number,
   key: string,
-  name?: string
+  name?: string,
+  expiresIn?: number
 ): Promise<UploadResult> => {
   // Ownership: the key must live under this user's prefix.
   if (!key.startsWith(`${userId}/`)) {
@@ -158,5 +164,5 @@ export const completeUpload = async (
   // Derive a display name from the key if the client didn't send one.
   const displayName = name ?? key.split('/').pop()?.replace(/^[0-9a-f-]{36}-/, '') ?? key;
 
-  return finalizeUpload(userId, key, displayName, size);
+  return finalizeUpload(userId, key, displayName, size, expiresIn);
 };
