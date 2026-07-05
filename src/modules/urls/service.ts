@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db } from '../../db';
 import { shortenedUrls } from '../../db/schema';
-import { s3, PRESIGN_EXPIRES_IN, clampPresignExpiry } from '../../config/s3';
+import { s3, clampPresignExpiry, clampS3PresignExpiry } from '../../config/s3';
 
 export type UrlVariant = 'view' | 'download';
 
@@ -44,7 +44,7 @@ export const presignForKey = (
 ): string => {
   return s3.file(keyId).presign({
     method: 'GET',
-    expiresIn: clampPresignExpiry(expiresIn),
+    expiresIn: clampS3PresignExpiry(expiresIn),
     ...(variant === 'download' ? { contentDisposition: 'attachment' } : {}),
   });
 };
@@ -52,8 +52,27 @@ export const presignForKey = (
 // Check whether a cached presigned URL is still valid.
 const isPresignedUrlFresh = (record: typeof shortenedUrls.$inferSelect): boolean => {
   if (!record.expiresIn || !record.presignedAt) return false;
-  const expiresAt = new Date(record.presignedAt).getTime() + record.expiresIn * 1000;
+  // The cached raw URL can only be fresh for S3's max presign lifetime, even
+  // if the short-link policy is 30/365 days.
+  const expiresAt = new Date(record.presignedAt).getTime() + clampS3PresignExpiry(record.expiresIn) * 1000;
   return Date.now() < expiresAt;
+};
+
+export const regenerateShortUrl = async (shortCode: string): Promise<string | null> => {
+  const record = await db.query.shortenedUrls.findFirst({
+    where: eq(shortenedUrls.shortCode, shortCode),
+  });
+  if (!record?.keyId) return null;
+
+  const variant = (record.variant as UrlVariant) ?? 'view';
+  const freshUrl = presignForKey(record.keyId, variant, record.expiresIn ?? undefined);
+
+  await db
+    .update(shortenedUrls)
+    .set({ originalUrl: freshUrl, presignedAt: new Date() })
+    .where(eq(shortenedUrls.id, record.id));
+
+  return freshUrl;
 };
 
 // Resolve a short code to a destination URL. For S3-backed records we reuse the
@@ -77,13 +96,5 @@ export const resolveUrl = async (shortCode: string): Promise<string | null> => {
   }
 
   // Expired (or never presigned): regenerate lazily.
-  const variant = (record.variant as UrlVariant) ?? 'view';
-  const freshUrl = presignForKey(record.keyId, variant, record.expiresIn ?? undefined);
-
-  await db
-    .update(shortenedUrls)
-    .set({ originalUrl: freshUrl, presignedAt: new Date() })
-    .where(eq(shortenedUrls.id, record.id));
-
-  return freshUrl;
+  return regenerateShortUrl(shortCode);
 };
