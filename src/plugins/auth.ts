@@ -10,13 +10,28 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not set');
 }
 
-// Shared, named JWT plugin. Elysia dedupes by name, so importing this into
-// multiple modules registers a single instance. Exposes `jwt.sign` / `jwt.verify`.
+// Separate secret for refresh tokens. Falls back to the access secret so
+// existing deployments keep working, but setting REFRESH_JWT_SECRET is
+// strongly recommended so a leaked access secret can't mint refresh tokens.
+const REFRESH_JWT_SECRET = process.env.REFRESH_JWT_SECRET ?? JWT_SECRET;
+
+// Access token: short-lived (1h). Used for all authenticated API requests.
 export const jwtPlugin = new Elysia({ name: 'jwt' }).use(
   jwt({
     name: 'jwt',
     secret: JWT_SECRET,
     exp: '1h',
+  })
+);
+
+// Refresh token: long-lived (30d). Only used to mint new access tokens.
+// Never sent on regular API requests — stored client-side and posted to
+// /api/auth/refresh when the access token expires.
+export const refreshJwtPlugin = new Elysia({ name: 'jwt.refresh' }).use(
+  jwt({
+    name: 'refreshJwt',
+    secret: REFRESH_JWT_SECRET,
+    exp: '30d',
   })
 );
 

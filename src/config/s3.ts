@@ -26,7 +26,29 @@ export const s3 = new S3Client({
 // How long presigned download/view URLs stay valid, in seconds (default 7 days).
 export const PRESIGN_EXPIRES_IN = Number(process.env.S3_PRESIGN_EXPIRES_IN ?? 60 * 60 * 24 * 7);
 
+// S3 SigV4 caps X-Amz-Expires at 7 days. Longer user-selected durations are
+// stored as the short-link policy lifetime, but each raw presigned URL is
+// generated for at most this value and lazily regenerated when hit.
+export const S3_MAX_PRESIGN_EXPIRES_IN = 60 * 60 * 24 * 7;
+
+// Maximum allowed presign duration a client can request, in seconds
+// (default 365 days). Prevents abuse via excessively long-lived URLs.
+export const MAX_PRESIGN_EXPIRES_IN = Number(
+  process.env.S3_MAX_PRESIGN_EXPIRES_IN ?? 60 * 60 * 24 * 365
+);
+
 // How long presigned upload (PUT) URLs stay valid, in seconds (default 15 min).
 export const UPLOAD_PRESIGN_EXPIRES_IN = Number(
   process.env.S3_UPLOAD_PRESIGN_EXPIRES_IN ?? 60 * 15
 );
+
+// Clamp a client-requested expiry to the allowed [1, MAX] range. Falls back
+// to the server default when the caller doesn't specify one.
+export const clampPresignExpiry = (expiresIn?: number): number => {
+  if (expiresIn === undefined || expiresIn <= 0) return PRESIGN_EXPIRES_IN;
+  return Math.min(expiresIn, MAX_PRESIGN_EXPIRES_IN);
+};
+
+export const clampS3PresignExpiry = (expiresIn?: number): number => {
+  return Math.min(clampPresignExpiry(expiresIn), S3_MAX_PRESIGN_EXPIRES_IN);
+};
