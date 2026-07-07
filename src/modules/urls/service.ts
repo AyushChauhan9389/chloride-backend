@@ -14,16 +14,10 @@ interface ShortenOptions {
 
 // Create a short code. For S3-backed objects we store the object key, variant,
 // and presign expiry so the presigned URL can be lazily regenerated when it
-// expires (the bucket is private, so we never persist a long-lived public URL).
-// `originalUrl` holds the currently-cached presigned URL.
-export const shortenUrl = async (
-  originalUrl: string,
-  options?: ShortenOptions
-): Promise<string> => {
+// expires. `originalUrl` holds the currently-cached presigned URL.
+export const shortenUrl = async (originalUrl: string, options?: ShortenOptions): Promise<string> => {
   const shortCode = nanoid(8);
-  const expiresIn = options?.keyId
-    ? clampPresignExpiry(options?.expiresIn)
-    : null;
+  const expiresIn = options?.keyId ? clampPresignExpiry(options?.expiresIn) : null;
 
   await db.insert(shortenedUrls).values({
     originalUrl,
@@ -36,17 +30,32 @@ export const shortenUrl = async (
   return shortCode;
 };
 
+const contentDispositionFor = (name: string): string => {
+  const asciiName = name.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+  return `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+};
+
 // Generate a presigned URL for an S3 object key.
 export const presignForKey = (
   keyId: string,
   variant: UrlVariant,
-  expiresIn?: number
+  expiresIn?: number,
+  fileName?: string
 ): string => {
   return s3.file(keyId).presign({
     method: 'GET',
     expiresIn: clampS3PresignExpiry(expiresIn),
-    ...(variant === 'download' ? { contentDisposition: 'attachment' } : {}),
+    ...(variant === 'download'
+      ? { contentDisposition: fileName ? contentDispositionFor(fileName) : 'attachment' }
+      : {}),
   });
+};
+
+const fileNameForKey = async (keyId: string): Promise<string | undefined> => {
+  const file = await db.query.files.findFirst({
+    where: (files, { eq }) => eq(files.keyId, keyId),
+  });
+  return file?.name;
 };
 
 // Check whether a cached presigned URL is still valid.
@@ -54,7 +63,8 @@ const isPresignedUrlFresh = (record: typeof shortenedUrls.$inferSelect): boolean
   if (!record.expiresIn || !record.presignedAt) return false;
   // The cached raw URL can only be fresh for S3's max presign lifetime, even
   // if the short-link policy is 30/365 days.
-  const expiresAt = new Date(record.presignedAt).getTime() + clampS3PresignExpiry(record.expiresIn) * 1000;
+  const expiresAt =
+    new Date(record.presignedAt).getTime() + clampS3PresignExpiry(record.expiresIn) * 1000;
   return Date.now() < expiresAt;
 };
 
@@ -65,7 +75,8 @@ export const regenerateShortUrl = async (shortCode: string): Promise<string | nu
   if (!record?.keyId) return null;
 
   const variant = (record.variant as UrlVariant) ?? 'view';
-  const freshUrl = presignForKey(record.keyId, variant, record.expiresIn ?? undefined);
+  const fileName = variant === 'download' ? await fileNameForKey(record.keyId) : undefined;
+  const freshUrl = presignForKey(record.keyId, variant, record.expiresIn ?? undefined, fileName);
 
   await db
     .update(shortenedUrls)
@@ -77,24 +88,20 @@ export const regenerateShortUrl = async (shortCode: string): Promise<string | nu
 
 // Resolve a short code to a destination URL. For S3-backed records we reuse the
 // cached presigned URL while it's still valid; once it expires we regenerate a
-// fresh one (with the same expiresIn), update the row, and return it. This
-// avoids hitting S3 on every redirect while keeping links permanent.
+// fresh one, update the row, and return it.
 export const resolveUrl = async (shortCode: string): Promise<string | null> => {
   const record = await db.query.shortenedUrls.findFirst({
     where: eq(shortenedUrls.shortCode, shortCode),
   });
   if (!record) return null;
 
-  // Non-S3 links: return the stored URL as-is.
   if (!record.keyId) {
     return record.originalUrl;
   }
 
-  // S3-backed: reuse the cached presigned URL if it hasn't expired yet.
   if (isPresignedUrlFresh(record)) {
     return record.originalUrl;
   }
 
-  // Expired (or never presigned): regenerate lazily.
   return regenerateShortUrl(shortCode);
 };

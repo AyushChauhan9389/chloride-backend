@@ -47,9 +47,8 @@ const finalizeUpload = async (
   expiresIn?: number
 ): Promise<UploadResult> => {
   const expiry = clampPresignExpiry(expiresIn);
-
   const viewUrl = presignForKey(key, 'view', expiry);
-  const downloadUrl = presignForKey(key, 'download', expiry);
+  const downloadUrl = presignForKey(key, 'download', expiry, name);
 
   const [newFile] = await db
     .insert(filesTable)
@@ -64,7 +63,11 @@ const finalizeUpload = async (
     .returning();
 
   const shortViewCode = await shortenUrl(viewUrl, { keyId: key, variant: 'view', expiresIn: expiry });
-  const shortDownloadCode = await shortenUrl(downloadUrl, { keyId: key, variant: 'download', expiresIn: expiry });
+  const shortDownloadCode = await shortenUrl(downloadUrl, {
+    keyId: key,
+    variant: 'download',
+    expiresIn: expiry,
+  });
   const shortViewUrl = `https://${domain()}/${shortViewCode}`;
   const shortDownloadUrl = `https://${domain()}/${shortDownloadCode}`;
 
@@ -86,7 +89,11 @@ const finalizeUpload = async (
 };
 
 // --- Flow 1: upload through the API (client -> server -> S3) ---
-export const uploadSingle = async (file: File, userId: number, expiresIn?: number): Promise<UploadResult> => {
+export const uploadSingle = async (
+  file: File,
+  userId: number,
+  expiresIn?: number
+): Promise<UploadResult> => {
   await assertQuota(userId, file.size);
 
   const key = buildKey(userId, file.name);
@@ -96,7 +103,11 @@ export const uploadSingle = async (file: File, userId: number, expiresIn?: numbe
   return finalizeUpload(userId, key, file.name, file.size, expiresIn);
 };
 
-export const uploadMultiple = async (files: File[], userId: number, expiresIn?: number): Promise<UploadResult[]> => {
+export const uploadMultiple = async (
+  files: File[],
+  userId: number,
+  expiresIn?: number
+): Promise<UploadResult[]> => {
   const results: UploadResult[] = [];
   for (const file of files) {
     results.push(await uploadSingle(file, userId, expiresIn));
