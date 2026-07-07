@@ -45,7 +45,7 @@ const finalizeUpload = async (
   size: number
 ): Promise<UploadResult> => {
   const viewUrl = presignForKey(key, 'view');
-  const downloadUrl = presignForKey(key, 'download');
+  const downloadUrl = presignForKey(key, 'download', name);
 
   const [newFile] = await db
     .insert(filesTable)

@@ -24,12 +24,19 @@ export const shortenUrl = async (
   return shortCode;
 };
 
+const contentDispositionFor = (name: string): string => {
+  const asciiName = name.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+  return `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+};
+
 // Generate a presigned URL for an S3 object key.
-export const presignForKey = (keyId: string, variant: UrlVariant): string => {
+export const presignForKey = (keyId: string, variant: UrlVariant, fileName?: string): string => {
   return s3.file(keyId).presign({
     method: 'GET',
     expiresIn: PRESIGN_EXPIRES_IN,
-    ...(variant === 'download' ? { contentDisposition: 'attachment' } : {}),
+    ...(variant === 'download'
+      ? { contentDisposition: fileName ? contentDispositionFor(fileName) : 'attachment' }
+      : {}),
   });
 };
 
@@ -42,7 +49,10 @@ export const resolveUrl = async (shortCode: string): Promise<string | null> => {
   if (!record) return null;
 
   if (record.keyId) {
-    return presignForKey(record.keyId, (record.variant as UrlVariant) ?? 'view');
+    const file = await db.query.files.findFirst({
+      where: (files, { eq }) => eq(files.keyId, record.keyId!),
+    });
+    return presignForKey(record.keyId, (record.variant as UrlVariant) ?? 'view', file?.name);
   }
   return record.originalUrl;
 };
