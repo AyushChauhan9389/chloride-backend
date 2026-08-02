@@ -9,6 +9,7 @@ import { rolesModule } from './modules/roles';
 import { plansModule } from './modules/plans';
 import { uploadsModule } from './modules/uploads';
 import { filesModule } from './modules/files';
+import { installModule } from './modules/install';
 import { urlsModule } from './modules/urls';
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -49,6 +50,8 @@ export const app = new Elysia()
   .use(plansModule)
   .use(uploadsModule)
   .use(filesModule)
+  // CLI install scripts — must come before the shortener's /:shortCode.
+  .use(installModule)
   // URL shortener catch-all (root-level /:shortCode) — registered last.
   .use(urlsModule);
 

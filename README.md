@@ -46,6 +46,7 @@ src/
     ├── plans/            # plan CRUD, storage/quota
     ├── uploads/          # S3 upload (single/multiple)
     ├── files/            # file listing/retrieval
+    ├── install/          # CLI install scripts (must be mounted before urls/)
     └── urls/             # short-code redirects
 ```
 
@@ -68,8 +69,28 @@ Routes opt into auth via the `auth` macro:
 | Plans  | `GET /api/plans/available`, `POST /api/plans/assign`, `GET /api/plans/user/storage`, `*/api/plans/admin/*` |
 | Upload | `POST /api/upload/single`, `POST /api/upload/multiple` (through-API); `POST /api/upload/presign` → client PUTs to S3 → `POST /api/upload/complete` (direct-to-S3) |
 | Files  | `GET /api/files/my-files`, `GET /api/files/all`, `GET /api/files/:fileId` |
+| Install | `GET /install` (+ `/install.sh`), `GET /install.ps1` |
 | URLs   | `GET /:shortCode` (redirect) |
 | Misc   | `GET /api/health`, `GET /api/protected` |
+
+## CLI install scripts
+
+`src/modules/install/` serves the one-liner installers for the `cl` CLI as
+plain text:
+
+```bash
+curl -fsSL https://chloride.carbonkit.tech/install | sh      # Linux
+irm https://chloride.carbonkit.tech/install.ps1 | iex        # Windows
+```
+
+The scripts themselves are checked in as real `.sh` / `.ps1` files next to the
+module and read once at boot. They download the latest release binary from
+`github.com/ayushChauhan9389/chloride/releases/latest` and verify its SHA-256.
+
+⚠️ `installModule` **must stay mounted before `urlsModule`** in `src/index.ts`.
+`urlsModule` owns the root-level `/:shortCode` catch-all and would otherwise
+resolve `/install` as a short code. `src/modules/install/install.test.ts`
+guards this.
 
 ## Storage model (S3)
 
